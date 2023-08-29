@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+set -eu
+
+export ESCNN_REPO=$(realpath ${1:-})
+
+DEFAULT_OUT_DIR=$(git -C $ESCNN_REPO rev-parse --short HEAD)
+git -C $ESCNN_REPO diff --quiet || DEFAULT_OUT_DIR="${DEFAULT_OUT_DIR}-dirty"
+
+export OUT_DIR=$(realpath ${2:-$DEFAULT_OUT_DIR})
+
+if [ ! "$ESCNN_REPO" ]; then
+    echo "Usage:"
+    echo "  run_tests <escnn_repo> [<out_dir>]"
+    exit 1
+elif [ ! -d "$ESCNN_REPO" ]; then
+    echo "ABORT: escnn repository not found: $ESCNN_REPO"
+    exit 1
+elif [ -d "$OUT_DIR" ]; then
+    echo "ABORT: output directory already exists: $OUT_DIR"
+    exit 1
+fi
+
+# Make sure some dependencies are installed.
+. $ESCNN_REPO/venv/bin/activate
+pip install \
+    matplotlib \
+    more_itertools \
+    pooch \
+    scikit-image \
+    scikit-learn \
+    torch_geometric \
+    tqdm
+
+echo "Output directory: $OUT_DIR"
+mkdir $OUT_DIR
+
+sbatch <<EOF
+#!/usr/bin/env bash
+
+#SBATCH --array 0-99
+#SBATCH --time 04:00:00
+#SBATCH --partition short
+#SBATCH --mem 32GB
+
+python run_tests.py $OUT_DIR
+EOF
