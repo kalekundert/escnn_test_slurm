@@ -34,13 +34,17 @@ pip install \
 echo "Output directory: $OUT_DIR"
 mkdir $OUT_DIR
 
+# 4 GB RAM is not enough; a number of tests will get OOM killed.  But even 32
+# GB is not enough for all the test to complete, and the cluster admins get mad
+# when you request way more memory than you need.
+
 sbatch <<EOF
 #!/usr/bin/env bash
 
 #SBATCH --array 0-99
 #SBATCH --time 04:00:00
 #SBATCH --partition short
-#SBATCH --mem 32GB
+#SBATCH --mem 4GB
 
 python run_tests.py $OUT_DIR
 EOF
